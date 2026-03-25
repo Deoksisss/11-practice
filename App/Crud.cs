@@ -14,7 +14,7 @@ public class Crud
             CreatedAt = DateTime.UtcNow
         };
         
-        db.Notes.Add(note);
+        await db.Notes.AddAsync(note, ct);
         await db.SaveChangesAsync(ct);
         return note;
     }
@@ -23,7 +23,7 @@ public class Crud
     public static async Task<List<Note>> Read(string search, CancellationToken ct = default)
     {
         await using var db = new NoteDbContext();
-        return await db.Notes.Where(x => EF.Functions.Like(x.Name, $"%search%")).ToListAsync(ct);
+        return await db.Notes.Where(x => EF.Functions.Like(x.Name, $"%{search}%")).ToListAsync(ct);
     }
 
     public static async Task<Note?> Read(int id, CancellationToken ct = default)
@@ -43,7 +43,7 @@ public class Crud
     }
     
     // D
-    public static async Task Delete(Note note, CancellationToken ct = default)
+    public static async Task Delete(Note? note, CancellationToken ct = default)
     {
         await using var db = new NoteDbContext();
         db.Notes.Remove(note);
