@@ -4,49 +4,83 @@ namespace cs_practice_11;
 
 public class Crud
 {
+    private readonly AppDbContext _db = new();
     // C
-    public static async Task<Note> Create(string name, CancellationToken ct = default)
+    public async Task<User> CreateUser(string name, CancellationToken ct = default)
     {
-        await using var db = new NoteDbContext();
+        var user = new User();
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync(ct);
+        
+        return user;
+    }
+
+    public async Task AddNoteToUser(int userId, string name, CancellationToken ct = default)
+    {
         var note = new Note
         {
+            UserId = userId,
             Name = name,
             CreatedAt = DateTime.UtcNow
         };
-        
-        await db.Notes.AddAsync(note, ct);
-        await db.SaveChangesAsync(ct);
-        return note;
+        _db.Notes.Add(note);
+        await _db.SaveChangesAsync(ct);
     }
 
     // R
-    public static async Task<List<Note>> Read(string search, CancellationToken ct = default)
+    public async Task<List<User>> ReadUsers(string search, CancellationToken ct = default)
     {
-        await using var db = new NoteDbContext();
-        return await db.Notes.Where(x => EF.Functions.Like(x.Name, $"%{search}%")).ToListAsync(ct);
+        IQueryable<User> query = _db.Users.Include(u => u.Notes);
+        
+        query = query.Where(u => u.Notes.Any(n => n.Name.Contains(search)));
+        
+        return await query.ToListAsync(ct);
     }
 
-    public static async Task<Note?> Read(int id, CancellationToken ct = default)
+    public async Task<List<User>> ReadUsers(int id, CancellationToken ct = default)
     {
-        await using var db = new NoteDbContext();
-        return await db.Notes.FirstOrDefaultAsync(x => x.Id == id, ct);
+        IQueryable<User> query = _db.Users.Include(u => u.Notes);
+        
+        query = query.Where(u => u.Id == id);
+        return await query.ToListAsync(ct);
+    }
+
+    public async Task<List<Note>> ReadNotes(string search, CancellationToken ct = default)
+    {
+        IQueryable<Note> query = _db.Notes;
+        
+        query = query.Where(n => n.Name.Contains(search));
+        
+        return await query.ToListAsync(ct);
+    }
+
+    public async Task<List<Note>> ReadNotes(int id, CancellationToken ct = default)
+    {
+        IQueryable<Note> query = _db.Notes;
+        
+        query = query.Where(n => n.Id == id);
+        return await query.ToListAsync(ct);
     }
     
     // U
-    public static async Task Update(Note note, string name, CancellationToken ct = default)
+    public async Task Update(Note note, string name, CancellationToken ct = default)
     {
-        await using var db = new NoteDbContext();
         note.Name = name;
         note.CreatedAt = DateTime.UtcNow;
-        db.Notes.Update(note);
-        await db.SaveChangesAsync(ct);
+        _db.Notes.Update(note);
+        await _db.SaveChangesAsync(ct);
     }
     
     // D
-    public static async Task Delete(Note? note, CancellationToken ct = default)
+    public async Task DeleteNote(Note? note, CancellationToken ct = default)
     {
-        await using var db = new NoteDbContext();
-        db.Notes.Remove(note);
-        await db.SaveChangesAsync(ct);
+        if (note != null) _db.Notes.Remove(note);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task DeleteUser(User? user, CancellationToken ct = default)
+    {
+        if (user != null) _db.Users.Remove(user);
+        await _db.SaveChangesAsync(ct);
     }
 }

@@ -6,9 +6,9 @@ namespace App.Tests;
 public static class NotesCrudTests
 {
 
-    static async Task<NoteDbContext> InitializeDb()
+    static async Task<AppDbContext> InitializeDb()
     {
-        NoteDbContext db = new NoteDbContext();
+        AppDbContext db = new AppDbContext();
         await db.Database.EnsureDeletedAsync();
         await db.Database.EnsureCreatedAsync();
         return db;
