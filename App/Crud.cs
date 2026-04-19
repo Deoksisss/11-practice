@@ -6,7 +6,7 @@ public class Crud
 {
     private readonly AppDbContext _db = new();
     // C
-    public async Task<User> CreateUser(string name, CancellationToken ct = default)
+    public async Task<User> CreateUser(CancellationToken ct = default)
     {
         var user = new User();
         _db.Users.Add(user);
