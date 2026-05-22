@@ -5,7 +5,7 @@ namespace cs_practice_11;
 public class Crud(AppDbContext db)
 {
     // C
-    public async Task<User> CreateUser(CancellationToken ct = default)
+    public static async Task<User> CreateUser(CancellationToken ct = default)
     {
         var user = new User();
         db.Users.Add(user);
@@ -14,7 +14,7 @@ public class Crud(AppDbContext db)
         return user;
     }
 
-    public async Task AddNoteToUser(int userId, string name, CancellationToken ct = default)
+    public static async Task AddNoteToUser(int userId, string name, CancellationToken ct = default)
     {
         var note = new Note
         {
@@ -24,6 +24,7 @@ public class Crud(AppDbContext db)
         };
         db.Notes.Add(note);
         await db.SaveChangesAsync(ct);
+        
     }
 
     // R

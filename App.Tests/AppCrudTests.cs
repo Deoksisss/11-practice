@@ -1,112 +1,99 @@
 ﻿using cs_practice_11;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace App.Tests;
 
-// Так как в задании не написано сделать тесты, я сделал их нейронкой (я их не читал)
-
-public class CrudTests : IDisposable
+public static class NotesCrudTests
 {
-    private readonly SqliteConnection _connection;
-    private readonly AppDbContext _db;
-    private readonly Crud _crud;
 
-    public CrudTests()
+    static async Task<AppDbContext> InitializeDb()
     {
-        // 1. Создаем соединение с SQLite в памяти
-        _connection = new SqliteConnection("Filename=:memory:");
-        _connection.Open();
-
-        // 2. Настраиваем DbContext на использование этого соединения
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(_connection)
-            .Options;
-
-        _db = new AppDbContext();
-
-        // 3. Создаем схему таблиц (обязательно для SQLite)
-        _db.Database.EnsureCreated();
-
-        _crud = new Crud(_db);
+        AppDbContext db = new AppDbContext();
+        await db.Database.EnsureDeletedAsync();
+        await db.Database.EnsureCreatedAsync();
+        return db;
     }
-
+    // C
     [Fact]
-    public async Task CreateUser_ShouldWorkInSqlite()
+    public static async Task UserCreated_Success()
     {
-        // Act
-        var user = await _crud.CreateUser();
-
-        // Assert
-        Assert.True(user.Id > 0);
+        var db = await InitializeDb();
+        
+        var createdUser = await Crud.CreateUser();
+        
+        Assert.NotNull(createdUser);
+        Assert.True(createdUser.Id > 0);
     }
-
     [Fact]
-    public async Task AddNoteToUser_ShouldPersistData()
+    public async Task NoteCreated_Success()
     {
-        // Arrange
-        var user = await _crud.CreateUser();
+        var db = await InitializeDb();
+        var createdUser = await Crud.CreateUser();
 
-        // Act
-        await _crud.AddNoteToUser(user.Id, "Сходить за хлебом");
-
-        // Assert
-        var note = await _db.Notes.FirstOrDefaultAsync(n => n.UserId == user.Id);
+        await Crud.AddNoteToUser(createdUser.Id, "My first note");
+        var note = await db.Notes.FirstOrDefaultAsync(n => n.Id == createdUser.Id);
+        
         Assert.NotNull(note);
-        Assert.Equal("Сходить за хлебом", note.Name);
+        Assert.Equal("My first note", note.Name);
+        Assert.Equal(createdUser.Id, note.UserId);
+    }    
+    // R
+    [Fact]
+    public static async Task ReadByName_Success()
+    {
+        string name = "My first note";
+        var db = await InitializeDb();
+        await Crud.Create(name);
+        
+        var notes = await Crud.Read("My");
+        
+        Assert.Equal(notes.First().Name, name);
     }
 
     [Fact]
-    public async Task ReadUsers_WithSearch_ShouldReturnMatches()
+    public static async Task ReadByID_Success()
     {
-        // Arrange
-        var user = await _crud.CreateUser();
-        await _crud.AddNoteToUser(user.Id, "Купить молоко");
-        await _crud.AddNoteToUser(user.Id, "Продать гараж");
-
-        // Act
-        var result = await _crud.ReadUsers("молоко");
-
-        // Assert
-        Assert.Contains(result[0].Notes, n => n.Name.Contains("молоко"));
+        var name = "My first note";
+        var db = await InitializeDb();
+        await Crud.Create(name);
+        
+        var note = await Crud.Read(1);
+        
+        Assert.NotNull(note);
+        Assert.Equal(note.Name, name);
+        
     }
 
     [Fact]
-    public async Task Update_ShouldChangeNoteInDb()
+    public static async Task ReadById_OutOfRange_Null()
     {
-        // Arrange
-        var user = await _crud.CreateUser();
-        await _crud.AddNoteToUser(user.Id, "Старое имя");
-        var note = await _db.Notes.FirstAsync();
-
-        // Act
-        await _crud.Update(note, "Новое имя");
-
-        // Assert
-        var updated = await _db.Notes.FirstAsync();
-        Assert.Equal("Новое имя", updated.Name);
+        var db = await InitializeDb();
+        
+        var note = await Crud.Read(1);
+        Assert.Null(note);
+    }
+    
+    [Fact]
+    public static async Task Update_Success()
+    {
+        var db = await InitializeDb();
+        var newName = "New note";
+        var note = await Crud.Create("Old Note");
+        
+        await Crud.Update(note, newName);
+        
+        Assert.Equal(newName, note.Name);
     }
 
     [Fact]
-    public async Task DeleteUser_ShouldRemoveUser()
+    public static async Task Delete_Success()
     {
-        // Arrange
-        var user = await _crud.CreateUser();
-        var userId = user.Id;
-
-        // Act
-        await _crud.DeleteUser(user);
-
-        // Assert
-        var deleted = await _crud.ReadUsers(userId);
-        Assert.Empty(deleted);
-    }
-
-    // Очистка ресурсов после каждого теста
-    public void Dispose()
-    {
-        _db.Dispose();
-        _connection.Close();
-        _connection.Dispose();
+        var db = await InitializeDb();
+        var note = await Crud.Create("My trash note");
+        var noteId = note.Id;
+        
+        await Crud.Delete(note);
+        
+        Assert.Null(await Crud.Read(noteId));
     }
 }
