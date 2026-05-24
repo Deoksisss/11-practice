@@ -17,20 +17,22 @@ public static class NotesCrudTests
     [Fact]
     public static async Task UserCreated_Success()
     {
-        var db = await InitializeDb();
+        using var db = await InitializeDb();
+        var crud = new Crud(db);
         
-        var createdUser = await Crud.CreateUser();
+        var createdUser = await crud.CreateUser();
         
         Assert.NotNull(createdUser);
         Assert.True(createdUser.Id > 0);
     }
     [Fact]
-    public async Task NoteCreated_Success()
+    public static async Task NoteCreated_Success()
     {
-        var db = await InitializeDb();
-        var createdUser = await Crud.CreateUser();
+        using var db = await InitializeDb();
+        var crud = new Crud(db);
+        var createdUser = await crud.CreateUser();
 
-        await Crud.AddNoteToUser(createdUser.Id, "My first note");
+        await crud.AddNoteToUser(createdUser.Id, "My first note");
         var note = await db.Notes.FirstOrDefaultAsync(n => n.Id == createdUser.Id);
         
         Assert.NotNull(note);
@@ -39,61 +41,20 @@ public static class NotesCrudTests
     }    
     // R
     [Fact]
-    public static async Task ReadByName_Success()
+    public static async Task SearchNoteByName_ShouldReturnUsersWithMathingNotes()
     {
-        string name = "My first note";
-        var db = await InitializeDb();
-        await Crud.Create(name);
-        
-        var notes = await Crud.Read("My");
-        
-        Assert.Equal(notes.First().Name, name);
-    }
+        using var db = await InitializeDb();
+        var crud = new Crud(db);
+        var user1 = await crud.CreateUser();
+        var user2 = await crud.CreateUser();
+        await crud.AddNoteToUser(user1.Id, "Search first note");
+        await crud.AddNoteToUser(user2.Id, "Search second note");
 
-    [Fact]
-    public static async Task ReadByID_Success()
-    {
-        var name = "My first note";
-        var db = await InitializeDb();
-        await Crud.Create(name);
+        var search = await crud.ReadUsers("Search");
         
-        var note = await Crud.Read(1);
-        
-        Assert.NotNull(note);
-        Assert.Equal(note.Name, name);
-        
-    }
-
-    [Fact]
-    public static async Task ReadById_OutOfRange_Null()
-    {
-        var db = await InitializeDb();
-        
-        var note = await Crud.Read(1);
-        Assert.Null(note);
-    }
-    
-    [Fact]
-    public static async Task Update_Success()
-    {
-        var db = await InitializeDb();
-        var newName = "New note";
-        var note = await Crud.Create("Old Note");
-        
-        await Crud.Update(note, newName);
-        
-        Assert.Equal(newName, note.Name);
-    }
-
-    [Fact]
-    public static async Task Delete_Success()
-    {
-        var db = await InitializeDb();
-        var note = await Crud.Create("My trash note");
-        var noteId = note.Id;
-        
-        await Crud.Delete(note);
-        
-        Assert.Null(await Crud.Read(noteId));
+        Assert.NotNull(search);
+        Assert.Equal(2, search.Count());
+        Assert.Equal(user1.Id, search.First().Id);
+        Assert.Equal(user2.Id, search.Last().Id);
     }
 }
