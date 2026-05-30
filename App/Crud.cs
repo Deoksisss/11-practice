@@ -53,22 +53,16 @@ public class Crud(AppDbContext db)
         
         return await query.ToListAsync(ct);
     }
-
-    public async Task<List<Note>> ReadNotes(int id, CancellationToken ct = default)
-    {
-        IQueryable<Note> query = db.Notes;
-        
-        query = query.Where(n => n.Id == id);
-        return await query.ToListAsync(ct);
-    }
     
     // U
-    public async Task Update(Note note, string name, CancellationToken ct = default)
+    public async Task<Note> Update(Note note, string name, CancellationToken ct = default)
     {
         note.Name = name;
         note.CreatedAt = DateTime.UtcNow;
         db.Notes.Update(note);
         await db.SaveChangesAsync(ct);
+
+        return note;
     }
     
     // D
